@@ -1,0 +1,67 @@
+[
+  {
+    "question": "What is the main topic or subject of this document?",
+    "ground_truth": "REPLACE WITH: The main topic of this document is [describe your PDF topic here].",
+    "difficulty": "easy"
+  },
+  {
+    "question": "Who is the author or organization that produced this document?",
+    "ground_truth": "REPLACE WITH: The document was produced by [author/organization].",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What date or time period does this document cover?",
+    "ground_truth": "REPLACE WITH: The document covers [date/period].",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What are the key terms or concepts defined in this document?",
+    "ground_truth": "REPLACE WITH: The key terms defined include [list terms and definitions from the PDF].",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What problem or challenge does this document address?",
+    "ground_truth": "REPLACE WITH: The document addresses the problem of [describe the problem].",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What specific data, statistics, or metrics are cited in this document?",
+    "ground_truth": "REPLACE WITH: The document cites [list specific numbers/statistics from the PDF].",
+    "difficulty": "medium"
+  },
+  {
+    "question": "What methodology or approach is described in this document?",
+    "ground_truth": "REPLACE WITH: The methodology described involves [explain the approach].",
+    "difficulty": "medium"
+  },
+  {
+    "question": "What are the limitations or risks mentioned in this document?",
+    "ground_truth": "REPLACE WITH: The document mentions the following limitations [list them].",
+    "difficulty": "medium"
+  },
+  {
+    "question": "How does this document compare or contrast two or more things?",
+    "ground_truth": "REPLACE WITH: The document compares [X] and [Y] by [explain the comparison].",
+    "difficulty": "medium"
+  },
+  {
+    "question": "What recommendations or next steps does this document suggest?",
+    "ground_truth": "REPLACE WITH: The recommended next steps are [list them from the PDF].",
+    "difficulty": "medium"
+  },
+  {
+    "question": "What evidence does the document provide to support its main argument?",
+    "ground_truth": "REPLACE WITH: The main argument is supported by [describe evidence from multiple sections].",
+    "difficulty": "hard"
+  },
+  {
+    "question": "How do the conclusions in this document relate to the data presented?",
+    "ground_truth": "REPLACE WITH: The conclusions [describe them] are drawn from [describe supporting data across sections].",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What would happen if the recommendations in this document were not followed?",
+    "ground_truth": "REPLACE WITH: If the recommendations were not followed, the document implies [consequences].",
+    "difficulty": "hard"
+  }
+]

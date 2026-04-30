@@ -1,0 +1,24 @@
+# Environment
+.env
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# ChromaDB (rebuilt during eval runs)
+eval_chroma_db/
+
+# Eval results (large, regenerable — keep .gitkeep)
+results/*.csv
+results/*.png
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
