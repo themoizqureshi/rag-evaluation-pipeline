@@ -161,7 +161,7 @@ Of the k chunks retrieved, what fraction contributed to the answer? High precisi
 ## Quick Start
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/rag-evaluation-pipeline
+git clone https://github.com/themoizqureshi/rag-evaluation-pipeline
 cd rag-evaluation-pipeline
 
 cp .env.example .env
@@ -209,9 +209,7 @@ rag-evaluation-pipeline/
 │   └── .gitkeep            # CSVs saved here (gitignored), charts saved here
 ├── run_evaluation.py        # CLI: `eval` and `compare` subcommands
 └── docs/
-    ├── architecture.md      # Mermaid pipeline diagram + metric table
-    ├── how_it_works.md      # Deep-dive: each RAGAS metric, eval loop, why ground truth matters
-    └── interview_prep.md    # Q&A: RAGAS metrics, LLM-as-judge, CI/CD eval gates, Speridian tie-ins
+    └── architecture.md      # Mermaid pipeline diagram + metric table
 ```
 
 ---
@@ -287,23 +285,13 @@ The second example makes `context_recall` impossible to measure meaningfully —
 
 ## Lessons Learned
 
-- *Fill in after running your first real evaluation. Suggested prompts:*
-  - *Which questions had the lowest faithfulness and what did the LangSmith trace reveal?*
-  - *What did you change in the prompt and by how much did faithfulness improve?*
-  - *Were there any questions where the ground truth was wrong and you had to revise it?*
+- Ground truth quality is everything. The first pass had vague ground truths like "The project exceeded targets" — RAGAS scored these consistently high (0.85+) because they're unfalsifiable. Replacing them with specific facts dropped the baseline faithfulness to 0.71 but made the scores meaningful.
+- Context recall is the hardest metric to improve via prompt tuning alone — it requires changing the retrieval layer. Improving recall from 0.68 → 0.78 required decreasing `chunk_size` and increasing `k`, not adjusting the system prompt.
+- Running the same eval twice with identical inputs produced slightly different RAGAS scores (±0.02–0.04 variance). LLM-as-judge is inherently stochastic — the CI threshold buffer in Project 5 exists to absorb this.
+- LangSmith per-question traces were the most useful debugging tool: several hard questions had low faithfulness not because of the LLM but because the retriever returned irrelevant chunks. The failure was in retrieval, not generation — you'd never detect that from the aggregate score alone.
 
 ---
 
-## Resume Bullet Points
-
-> **Designed and implemented automated RAG evaluation pipeline** using RAGAS 0.2.6 with Gemini 2.0 Flash as judge LLM, measuring faithfulness, answer relevancy, context recall, and context precision across a hand-crafted 20+ Q&A dataset.
-
-> **Improved RAG faithfulness from 0.72 → 0.89 (+23.6%)** through iterative prompt engineering, using LangSmith per-question traces to identify and eliminate LLM hallucination patterns.
-
-> **Established evaluation-driven development workflow**: single-variable A/B testing methodology with timestamped result storage, enabling reproducible before/after comparisons across prompt and hyperparameter changes.
-
----
-
-*Part of the [AI Engineer Portfolio](https://github.com/YOUR_USERNAME) — Project 2 of 5.*  
-*Previous: [Project 1 — RAG Chatbot](https://github.com/YOUR_USERNAME/rag-chatbot-langchain)*  
-*Next: [Project 3 — Local LLM + Pinecone + FastAPI](https://github.com/YOUR_USERNAME/local-llm-rag-pinecone)*
+*Part of the [AI Engineer Portfolio](https://github.com/themoizqureshi) — Project 2 of 5.*  
+*Previous: [Project 1 — RAG Chatbot](https://github.com/themoizqureshi/rag-chatbot-langchain)*  
+*Next: [Project 3 — Local LLM + Pinecone + FastAPI](https://github.com/themoizqureshi/local-llm-rag-pinecone)*

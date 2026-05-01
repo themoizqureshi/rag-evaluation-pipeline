@@ -22,3 +22,7 @@ results/*.png
 
 # OS
 .DS_Store
+
+# Private docs
+docs/how_it_works.md
+docs/interview_prep.md
