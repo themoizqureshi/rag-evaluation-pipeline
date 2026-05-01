@@ -17,6 +17,8 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Any
 
+import os
+
 import pandas as pd
 from datasets import Dataset
 from ragas import evaluate
@@ -29,6 +31,22 @@ from ragas.metrics import (
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
 logger = logging.getLogger(__name__)
+
+
+def _get_llm(temperature: float = 0):
+    """Return chat LLM — OpenRouter (if key set) else Gemini direct."""
+    openrouter_key = os.getenv("OPENROUTER_API_KEY")
+    if openrouter_key:
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(
+            model="google/gemini-2.0-flash-001",
+            openai_api_key=openrouter_key,
+            openai_api_base="https://openrouter.ai/api/v1",
+            temperature=temperature,
+        )
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    return ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=temperature)
+
 
 METRICS = [faithfulness, answer_relevancy, context_recall, context_precision]
 METRIC_NAMES = ["faithfulness", "answer_relevancy", "context_recall", "context_precision"]
@@ -79,7 +97,7 @@ def run_evaluation(dataset: Dataset) -> pd.DataFrame:
     result = evaluate(
         dataset=dataset,
         metrics=METRICS,
-        llm=ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0),
+        llm=_get_llm(temperature=0),
         embeddings=GoogleGenerativeAIEmbeddings(model="models/text-embedding-004"),
     )
 
