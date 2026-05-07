@@ -7,14 +7,14 @@ graph TD
     A["eval_datasets/qa_pairs.json\n(hand-crafted Q&A)"] --> B[load_qa_pairs]
     B --> C[validate_qa_pairs]
 
-    D["PDF Document"] --> E["Project 1 RAG Chain\n(Gemini 2.0 Flash)"]
+    D["PDF Document"] --> E["Project 1 RAG Chain\n(Gemini via OpenRouter)"]
     C --> E
 
-    E --> F["build_ragas_dataset()\nFor each question:\n• run chain → answer\n• run retriever → contexts"]
+    E --> F["build_ragas_dataset()\nFor each question:\n• run chain → answer\n• retriever.invoke() → contexts"]
 
     F --> G["RAGAS Dataset\n{question, answer, contexts, ground_truth}"]
 
-    G --> H["RAGAS evaluate()\nJudge LLM: Gemini 2.0 Flash"]
+    G --> H["RAGAS evaluate()\nJudge LLM: Gemini via OpenRouter\nEmbeddings: BAAI/bge-small-en-v1.5 (local)"]
 
     H --> I["faithfulness score"]
     H --> J["answer_relevancy score"]
@@ -52,8 +52,9 @@ graph TD
 
 | Decision | Choice | Reason |
 |----------|--------|--------|
-| Judge LLM | Gemini 2.0 Flash | Free, handles RAGAS prompt format correctly |
-| Embeddings | text-embedding-004 | Same as Project 1 — consistent embedding space |
+| Judge LLM | Gemini via OpenRouter | OpenRouter avoids daily free-tier quota limits; falls back to direct Gemini if `OPENROUTER_API_KEY` not set |
+| Embeddings | BAAI/bge-small-en-v1.5 (HuggingFace) | Runs locally — no API key, no quota, 384-dim; replaces `text-embedding-004` which 404s on the deprecated `v1beta` SDK path |
+| Retriever API | `retriever.invoke()` | `get_relevant_documents()` was removed in LangChain 0.3+ |
 | Min dataset size | 20 Q&A pairs | Statistical minimum for meaningful averages |
 | Difficulty split | Easy / Medium / Hard | Hard questions (multi-section synthesis) expose real failures |
 | Result storage | Timestamped CSVs | Enables before/after comparison across multiple runs |

@@ -1,13 +1,25 @@
-# RAG Evaluation Pipeline — RAGAS + Gemini
+# RAG Evaluation Pipeline — RAGAS + LLM-as-Judge
 
-> Measure your RAG system rigorously before shipping it. Hand-craft a Q&A dataset, run RAGAS scoring with Gemini-as-judge, compare prompt versions with a delta report, and know exactly *why* your scores changed. **This is what separates senior AI engineers from juniors.**
+> Measure your RAG system rigorously before shipping it. Hand-craft a Q&A dataset, run RAGAS scoring with an LLM-as-judge, compare prompt versions with a delta report, and know exactly *why* your scores changed. **This is what separates senior AI engineers from juniors.**
 
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![RAGAS](https://img.shields.io/badge/RAGAS-0.2.6-purple)
-![Gemini](https://img.shields.io/badge/Gemini-2.0_Flash-orange)
+![HuggingFace](https://img.shields.io/badge/HuggingFace-bge--small--en--v1.5-yellow)
+![OpenRouter](https://img.shields.io/badge/OpenRouter-Gemini_2.0_Flash-cyan)
 ![LangSmith](https://img.shields.io/badge/LangSmith-experiment--tracked-blue)
 
 **Prerequisite:** [Project 1 — RAG Chatbot](../rag-chatbot-langchain/) must exist at `../rag-chatbot-langchain/`
+
+---
+
+## Recent Changes
+
+| Date | Change | Reason |
+|------|--------|--------|
+| May 2026 | Switched embeddings from `text-embedding-004` → `BAAI/bge-small-en-v1.5` (HuggingFace, local) | `langchain-google-genai==2.0.4` uses deprecated `v1beta` API path; embedding endpoint returns 404 |
+| May 2026 | Added OpenRouter as primary LLM provider (`OPENROUTER_API_KEY`) | Google free-tier hits daily quota on evaluation runs (~200 LLM calls per eval). OpenRouter has no daily cap. |
+| May 2026 | Updated `retriever.get_relevant_documents()` → `retriever.invoke()` | `get_relevant_documents()` removed in LangChain 0.3+ |
+| May 2026 | Added `langchain-huggingface` + `sentence-transformers` to `requirements.txt` | New embedding dependency |
 
 ---
 
@@ -17,7 +29,8 @@
 |----------|------------------------|
 | **LLM Evaluation** | RAGAS 0.2.6, faithfulness, answer_relevancy, context_recall, context_precision |
 | **Evaluation Design** | Hand-crafted Q&A dataset at 3 difficulty levels, ground_truth specificity |
-| **LLM-as-Judge** | Gemini 2.0 Flash as judge LLM, same-model vs cross-model judge bias trade-offs |
+| **LLM-as-Judge** | Gemini 2.0 Flash via OpenRouter as judge, same-model vs cross-model judge bias trade-offs |
+| **Local Embeddings** | BAAI/bge-small-en-v1.5 via HuggingFace — 384-dim, runs on CPU, no API key required |
 | **Experiment Tracking** | LangSmith experiment sets, before/after comparison, per-question trace drill-down |
 | **Data Analysis** | pandas DataFrames, matplotlib/seaborn bar charts, delta comparison reports |
 | **CLI Design** | `argparse` with `eval` and `compare` subcommands, stdin/stdout reporting |
@@ -30,7 +43,7 @@
 
 **The Problem:** "It seems to answer correctly" is not an engineering measurement. Every RAG system looks fine on happy-path demos. Failures hide in edge cases — questions that cross document sections, questions where the LLM adds ungrounded qualifications, questions where the retriever misses the relevant chunk entirely.
 
-**The Solution:** An automated evaluation pipeline. You write 20-30 Q&A pairs from your document. The pipeline runs each question through your RAG chain, collects answers and retrieved contexts, and sends the complete `{question, answer, contexts, ground_truth}` tuples to RAGAS. Gemini 2.0 Flash acts as the judge, scoring each dimension. Results save to a timestamped CSV.
+**The Solution:** An automated evaluation pipeline. You write 20-30 Q&A pairs from your document. The pipeline runs each question through your RAG chain, collects answers and retrieved contexts, and sends the complete `{question, answer, contexts, ground_truth}` tuples to RAGAS. An LLM (Gemini via OpenRouter) acts as the judge, scoring each dimension. Results save to a timestamped CSV.
 
 **The Outcome:** A before/after comparison showing *exactly* which metrics improved, by how much, and why. Reproducible evidence of prompt engineering impact.
 
@@ -60,11 +73,11 @@ graph TD
     D[PDF Document] --> E["Project 1 RAG Chain\nbuild_rag_chain + retriever"]
     C --> E
 
-    E --> F["build_ragas_dataset()\nFor each Q&A pair:\n• chain.invoke(question) → answer\n• retriever.get_relevant_documents() → contexts"]
+    E --> F["build_ragas_dataset()\nFor each Q&A pair:\n• chain.invoke(question) → answer\n• retriever.invoke(question) → contexts"]
 
     F --> G["RAGAS Dataset\n{question, answer, contexts, ground_truth}"]
 
-    G --> H["ragas.evaluate()\nJudge LLM: Gemini 2.0 Flash\nEmbeddings: text-embedding-004"]
+    G --> H["ragas.evaluate()\nJudge LLM: Gemini via OpenRouter\nEmbeddings: BAAI/bge-small-en-v1.5 (local)"]
 
     H --> I[faithfulness]
     H --> J[answer_relevancy]
@@ -136,7 +149,8 @@ Of the k chunks retrieved, what fraction contributed to the answer? High precisi
 |----------|--------|-----|
 | **Q&A difficulty levels** | Easy / Medium / Hard | Easy = direct fact lookup (tests retrieval); Hard = multi-section synthesis (tests chunking strategy). A set of only easy questions masks real failures. |
 | **Ground truth specificity** | Exact figures, not summaries | Vague ground truth ("revenue was good") makes context_recall scores meaningless. Specific truth ("Q3 revenue was $47.2M, +12% YoY") allows RAGAS to precisely check if chunks contained that fact. |
-| **Judge LLM** | Gemini 2.0 Flash | Same model as the one generating answers — cost/simplicity trade-off. Ideal is a stronger model as judge to reduce same-model bias, but free tier makes this pragmatic. |
+| **Judge LLM** | Gemini via OpenRouter | OpenRouter has no daily quota cap — critical for eval runs that make ~200 LLM calls. Falls back to direct Gemini if `OPENROUTER_API_KEY` is absent. |
+| **Embeddings** | BAAI/bge-small-en-v1.5 (HuggingFace) | Runs locally — no API key, no quota limits. 384-dim. Replaces `text-embedding-004` which requires the deprecated `v1beta` SDK path. |
 | **Min dataset size** | 20 Q&A pairs | Fewer than 20 pairs and a single outlier shifts the mean by 5+ points, making comparisons statistically noisy. |
 | **Single variable change** | One change per eval run | Changing prompt AND chunk size simultaneously makes it impossible to attribute score changes to either. Treat each eval run as a controlled experiment. |
 | **Result storage** | Timestamped CSV files | Enables before/after comparison across any historical runs, not just sequential ones. |
@@ -149,8 +163,8 @@ Of the k chunks retrieved, what fraction contributed to the answer? High precisi
 | Component | Technology | Version | Why |
 |-----------|-----------|---------|-----|
 | Evaluation Framework | RAGAS | 0.2.6 | Industry-standard RAG eval; 4 metrics cover the full failure surface |
-| Judge LLM | Gemini 2.0 Flash | `langchain-google-genai` | Free, handles RAGAS prompt format correctly |
-| Embeddings (for relevancy metric) | Google text-embedding-004 | same key | Consistent embedding space with Project 1 |
+| Judge LLM | Gemini 2.0 Flash via OpenRouter | `langchain-openai` | No daily quota cap; OpenAI-compatible endpoint |
+| Embeddings | BAAI/bge-small-en-v1.5 | `langchain-huggingface` | Local inference — no API key, no quota. 384-dim. |
 | Data manipulation | pandas | 2.2.3 | DataFrame operations on eval results; mean/std aggregation |
 | Visualization | matplotlib + seaborn | 3.9.3 / 0.13.2 | Before/after bar charts, delta visualization |
 | Experiment tracking | LangSmith | auto via env | Per-question trace: which chunks retrieved, what the prompt looked like |
@@ -165,10 +179,12 @@ git clone https://github.com/themoizqureshi/rag-evaluation-pipeline
 cd rag-evaluation-pipeline
 
 cp .env.example .env
-# Same GOOGLE_API_KEY as Project 1
+# Add OPENROUTER_API_KEY (recommended) or GOOGLE_API_KEY
+# No embedding API key needed — embeddings run locally via HuggingFace
 
 uv venv && source .venv/bin/activate
 uv pip install -r requirements.txt
+# Note: first run downloads BAAI/bge-small-en-v1.5 (~90MB) — cached after that
 
 # Step 1: Fill in real Q&A for your PDF
 # Edit eval_datasets/qa_pairs.json — replace placeholder ground_truth values
@@ -200,7 +216,7 @@ All tests mock RAGAS and matplotlib calls — no API calls made during testing.
 ```
 rag-evaluation-pipeline/
 ├── src/
-│   ├── evaluator.py        # build_ragas_dataset(), run_evaluation() with Gemini judge
+│   ├── evaluator.py        # build_ragas_dataset(), run_evaluation() — LLM-as-judge via OpenRouter
 │   ├── dataset_builder.py  # validate_qa_pairs(), filter_by_difficulty(), summarize_dataset()
 │   └── reporter.py         # compare_runs() terminal table + matplotlib chart; save_results()
 ├── eval_datasets/
@@ -209,7 +225,7 @@ rag-evaluation-pipeline/
 │   └── .gitkeep            # CSVs saved here (gitignored), charts saved here
 ├── run_evaluation.py        # CLI: `eval` and `compare` subcommands
 └── docs/
-    └── architecture.md      # Mermaid pipeline diagram + metric table
+    └── architecture.md      # Mermaid pipeline diagram + metric table + key decisions
 ```
 
 ---
@@ -278,7 +294,7 @@ The second example makes `context_recall` impossible to measure meaningfully —
 | **Score regression gates** | Manual inspection | `sys.exit(1)` if any metric drops below threshold — blocks bad deploys (implemented in Project 5) |
 | **Eval dataset drift** | Static JSON | Version Q&A pairs in git; add new pairs when users report failures |
 | **Judge reliability** | Single judge run | Run each sample 3x and take the mean to reduce judge variance |
-| **Cost of eval** | ~$0 on Gemini free tier | Track token usage; use a subset of the eval set for frequent checks |
+| **Cost of eval** | ~$0 on OpenRouter free tier | Track token usage; use a subset of the eval set for frequent checks |
 | **Domain coverage** | Manually constructed | Supplement with LLM-generated adversarial questions targeting known edge cases |
 
 ---
@@ -289,6 +305,8 @@ The second example makes `context_recall` impossible to measure meaningfully —
 - Context recall is the hardest metric to improve via prompt tuning alone — it requires changing the retrieval layer. Improving recall from 0.68 → 0.78 required decreasing `chunk_size` and increasing `k`, not adjusting the system prompt.
 - Running the same eval twice with identical inputs produced slightly different RAGAS scores (±0.02–0.04 variance). LLM-as-judge is inherently stochastic — the CI threshold buffer in Project 5 exists to absorb this.
 - LangSmith per-question traces were the most useful debugging tool: several hard questions had low faithfulness not because of the LLM but because the retriever returned irrelevant chunks. The failure was in retrieval, not generation — you'd never detect that from the aggregate score alone.
+- `text-embedding-004` via `langchain-google-genai==2.0.4` returns 404 — the SDK uses the deprecated `v1beta` API path. Switched to `BAAI/bge-small-en-v1.5` (HuggingFace): local inference, 384-dim, no quota.
+- Google's free-tier daily quota (~60 requests) is exhausted in a single 20-sample eval run. OpenRouter (`google/gemini-2.0-flash-001`) has no daily cap and uses the same model.
 
 ---
 
