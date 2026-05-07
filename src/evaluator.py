@@ -28,7 +28,7 @@ from ragas.metrics import (
     context_recall,
     context_precision,
 )
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ def build_ragas_dataset(
         logger.info(f"[{i+1}/{len(qa_pairs)}] {question[:60]}")
 
         answer = chain.invoke(question)
-        docs = retriever.get_relevant_documents(question)
+        docs = retriever.invoke(question)
         contexts = [doc.page_content for doc in docs]
 
         data["question"].append(question)
@@ -98,7 +98,7 @@ def run_evaluation(dataset: Dataset) -> pd.DataFrame:
         dataset=dataset,
         metrics=METRICS,
         llm=_get_llm(temperature=0),
-        embeddings=GoogleGenerativeAIEmbeddings(model="models/text-embedding-004"),
+        embeddings=HuggingFaceEmbeddings(model_name="BAAI/bge-small-en-v1.5"),
     )
 
     df = result.to_pandas()
