@@ -8,8 +8,6 @@
 ![OpenRouter](https://img.shields.io/badge/OpenRouter-Gemini_2.0_Flash-cyan)
 ![LangSmith](https://img.shields.io/badge/LangSmith-experiment--tracked-blue)
 
-**Prerequisite:** [Project 1 — RAG Chatbot](../rag-chatbot-langchain/) must exist at `../rag-chatbot-langchain/`
-
 ---
 
 ## Recent Changes
@@ -179,25 +177,20 @@ git clone https://github.com/themoizqureshi/rag-evaluation-pipeline
 cd rag-evaluation-pipeline
 
 cp .env.example .env
-# Add OPENROUTER_API_KEY (recommended) or GOOGLE_API_KEY
-# No embedding API key needed — embeddings run locally via HuggingFace
+# Add OPENROUTER_API_KEY — used as RAGAS judge LLM (free at openrouter.ai)
+# No embedding API key needed — BAAI/bge-small-en-v1.5 runs locally
 
 uv venv && source .venv/bin/activate
 uv pip install -r requirements.txt
-# Note: first run downloads BAAI/bge-small-en-v1.5 (~90MB) — cached after that
 
-# Step 1: Fill in real Q&A for your PDF
-# Edit eval_datasets/qa_pairs.json — replace placeholder ground_truth values
+# Option A — Streamlit UI (recommended)
+streamlit run app.py
+# Demo mode: shows pre-computed v1 vs v2 results instantly, no API key needed
+# Live mode: upload your PDF and run a real RAGAS evaluation
 
-# Step 2: Run baseline evaluation
+# Option B — CLI
 python run_evaluation.py eval --pdf path/to/your.pdf --run-name baseline
-
-# Step 3: Improve something (tighten prompt, change chunk size, or change k)
-
-# Step 4: Re-run with a new name
-python run_evaluation.py eval --pdf path/to/your.pdf --run-name v2_tighter_prompt
-
-# Step 5: Compare
+python run_evaluation.py eval --pdf path/to/your.pdf --run-name v2_strict
 python run_evaluation.py compare results/baseline_*.csv results/v2_*.csv
 ```
 
@@ -207,6 +200,47 @@ python run_evaluation.py compare results/baseline_*.csv results/v2_*.csv
 pytest tests/ -v
 ```
 
+---
+
+## Testing with Your Own Data
+
+**Demo mode (no API key, zero setup):**
+```bash
+streamlit run app.py
+# Select "Demo (pre-computed)" in the sidebar — shows bundled results instantly
+```
+
+**Live mode (your PDF + OPENROUTER_API_KEY):**
+
+1. **Write Q&A ground truth pairs** for your document — edit `eval_datasets/sample_qa.json`:
+```json
+[
+  {
+    "question": "What is the main topic of this document?",
+    "ground_truth": "Copy the exact answer from your PDF here — not paraphrased, not LLM-generated."
+  }
+]
+```
+Ground truths must be specific facts from the document. Aim for 5–20 pairs spanning easy, medium, and hard questions.
+
+2. **Run the Streamlit app in Live mode:**
+```bash
+streamlit run app.py
+# Switch to "Live (your PDF)" in the sidebar
+# Upload your PDF → select Q&A pairs → choose prompt version → Run
+```
+
+3. **Compare runs:** run once with v1 (baseline), once with v2 (strict prompt). Results CSVs are saved to `results/` with timestamps.
+
+4. **CLI alternative:**
+```bash
+python run_evaluation.py eval --pdf your_doc.pdf --run-name my_baseline
+python run_evaluation.py eval --pdf your_doc.pdf --run-name my_v2
+python run_evaluation.py compare results/my_baseline_*.csv results/my_v2_*.csv
+```
+
+**What to expect:** faithfulness typically increases 0.10–0.20 when switching from v1 to v2 prompt. Context_precision may decrease slightly — this is expected and documented in Lessons Learned.
+
 All tests mock RAGAS and matplotlib calls — no API calls made during testing.
 
 ---
@@ -215,17 +249,23 @@ All tests mock RAGAS and matplotlib calls — no API calls made during testing.
 
 ```
 rag-evaluation-pipeline/
+├── app.py                   # Streamlit UI — Demo (pre-computed) and Live (your PDF) modes
 ├── src/
-│   ├── evaluator.py        # build_ragas_dataset(), run_evaluation() — LLM-as-judge via OpenRouter
-│   ├── dataset_builder.py  # validate_qa_pairs(), filter_by_difficulty(), summarize_dataset()
-│   └── reporter.py         # compare_runs() terminal table + matplotlib chart; save_results()
+│   ├── evaluator.py         # build_ragas_dataset(), run_evaluation() — LLM-as-judge via OpenRouter
+│   ├── rag_chain.py         # Self-contained RAG chain (LangChain + ChromaDB) — no Project 1 dependency
+│   ├── dataset_builder.py   # validate_qa_pairs(), filter_by_difficulty(), summarize_dataset()
+│   └── reporter.py          # compare_runs() terminal table + matplotlib chart; save_results()
 ├── eval_datasets/
-│   └── qa_pairs.json       # 13 template Q&A pairs (5 easy, 5 medium, 3 hard) — fill in for your PDF
+│   ├── sample_document.txt  # Bundled RAG overview document (~500 words) — used in Demo mode
+│   ├── sample_qa.json       # 5 real Q&A pairs for the sample document
+│   └── qa_pairs.json        # Template Q&A pairs — fill in for your own PDF
 ├── results/
-│   └── .gitkeep            # CSVs saved here (gitignored), charts saved here
-├── run_evaluation.py        # CLI: `eval` and `compare` subcommands
+│   ├── sample_v1_baseline.csv  # Pre-computed baseline results (shown in Demo mode)
+│   ├── sample_v2_improved.csv  # Pre-computed improved results (shown in Demo mode)
+│   └── .gitkeep             # Your live eval CSVs are saved here
+├── run_evaluation.py         # CLI: `eval` and `compare` subcommands
 └── docs/
-    └── architecture.md      # Mermaid pipeline diagram + metric table + key decisions
+    └── architecture.md       # Mermaid pipeline diagram + metric table + key decisions
 ```
 
 ---

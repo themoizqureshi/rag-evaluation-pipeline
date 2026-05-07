@@ -1,0 +1,27 @@
+[
+  {
+    "question": "What problem does RAG solve for large language models?",
+    "ground_truth": "RAG addresses the fact that LLMs have knowledge frozen at training time and cannot access new or domain-specific information without fine-tuning. It allows models to retrieve and use external documents at inference time.",
+    "difficulty": "easy"
+  },
+  {
+    "question": "Who introduced RAG and when?",
+    "ground_truth": "RAG was introduced by Meta AI researchers in 2020.",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What are the two phases of RAG operation?",
+    "ground_truth": "RAG operates in two phases: indexing (documents are chunked, embedded, and stored in a vector database) and inference (the query is embedded, top-k similar chunks are retrieved, and injected as context for the LLM to generate an answer).",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What does faithfulness measure in RAGAS evaluation?",
+    "ground_truth": "Faithfulness measures whether the answer is grounded in the retrieved context. It detects hallucination — answers that are not supported by the retrieved chunks. The target score is 0.75 or higher.",
+    "difficulty": "medium"
+  },
+  {
+    "question": "What are the two most common RAG failure modes?",
+    "ground_truth": "The two most common failure modes are retrieval failures (correct information exists in the document but is not in the retrieved chunks, caused by chunk size being too small or k being too low) and generation failures (correct chunks are retrieved but the LLM ignores them and answers from parametric memory, manifesting as low faithfulness scores).",
+    "difficulty": "medium"
+  }
+]

@@ -16,6 +16,9 @@ eval_chroma_db/
 # Eval results (large, regenerable — keep .gitkeep)
 results/*.csv
 results/*.png
+# Exception: bundled demo results committed for standalone demo mode
+!results/sample_v1_baseline.csv
+!results/sample_v2_improved.csv
 
 # Jupyter
 .ipynb_checkpoints/

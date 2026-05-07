@@ -1,0 +1,23 @@
+Retrieval-Augmented Generation (RAG): A Technical Overview
+
+Retrieval-Augmented Generation (RAG) is an AI framework that combines information retrieval with large language models (LLMs) to produce more accurate and grounded responses. Introduced by Meta AI researchers in 2020, RAG addresses a key limitation of LLMs: their knowledge is frozen at training time and they cannot access new or domain-specific information without fine-tuning.
+
+How RAG Works
+
+RAG operates in two phases. During indexing, source documents are split into chunks (typically 256–1024 tokens), converted to dense vector embeddings using a model such as BAAI/bge-small-en-v1.5 or OpenAI text-embedding-3-small, and stored in a vector database such as ChromaDB, Pinecone, or Weaviate. During inference, the user query is embedded using the same model, and the top-k most similar chunks are retrieved via cosine similarity search. These chunks are injected into the LLM prompt as context, and the LLM generates an answer grounded in that context.
+
+Key Metrics for Evaluation
+
+Four RAGAS metrics are commonly used to evaluate RAG pipelines. Faithfulness measures whether the answer is grounded in the retrieved context and detects hallucination; the target is 0.75 or higher. Answer Relevancy measures whether the answer actually addresses the question; the target is 0.70 or higher. Context Recall measures whether the retrieved chunks contain the information needed to answer; the target is 0.65 or higher. Context Precision measures whether the retrieved chunks are relevant and low in noise; the target is also 0.65 or higher.
+
+Common Failure Modes
+
+The two most common RAG failure modes are retrieval failures and generation failures. Retrieval failures occur when the correct information exists in the document but is not present in the retrieved chunks — caused by chunk size being too small or k being too low. Generation failures occur when the correct chunks are retrieved but the LLM ignores them and answers from parametric memory — these manifest as low faithfulness scores.
+
+Prompt Engineering for RAG
+
+The system prompt significantly affects RAG quality. A minimal baseline prompt tells the model to answer from context. An improved strict-grounding prompt explicitly instructs the model to only state facts present in the context, say "I don't have enough information" when the context is insufficient, and avoid qualifications like "typically" or "generally" unless those words appear in the context. In controlled A/B tests, switching from a minimal prompt to a strict-grounding prompt typically increases faithfulness by 0.10 to 0.20 while keeping answer relevancy stable.
+
+Production Considerations
+
+Production RAG systems typically use a hybrid retrieval strategy combining dense vector search with BM25 keyword search. Re-ranking models such as cross-encoders are applied after initial retrieval to improve precision. Guardrails are added to detect and block hallucinated answers before they reach users. For latency-sensitive applications, retrieval is performed asynchronously and cached for common queries. State persistence using SqliteSaver or RedisSaver ensures that multi-step workflows survive server restarts.
