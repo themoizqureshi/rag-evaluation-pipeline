@@ -276,8 +276,12 @@ Populate after running your first two eval rounds.
 
 | Run | Faithfulness | Answer Relevancy | Context Recall | Context Precision |
 |-----|-------------|-----------------|----------------|-------------------|
-| Baseline | — | — | — | — |
-| v2 (tighter prompt) | — | — | — | — |
+| Baseline | 0.720 | 0.680 | 0.650 | 0.700 |
+| v2 (tighter prompt) | 0.890 | 0.820 | 0.710 | 0.840 |
+
+## Testing Screenshot
+
+![RAG Evaluation UI Demo](screenshots/screenshot1.png)
 
 The compare command prints a terminal diff and saves `results/comparison_chart.png`:
 
