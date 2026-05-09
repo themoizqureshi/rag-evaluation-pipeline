@@ -27,24 +27,16 @@ logger = logging.getLogger(__name__)
 
 
 def run_eval(pdf_path: str, run_name: str) -> str:
-    """Run the full evaluation pipeline and return the results CSV path."""
-    # Import here so missing deps fail with a clear message
+    """
+    Run the full evaluation pipeline and return the results CSV path.
+
+    Prefers the live RAG API when RAG_API_URL is set in .env.
+    Falls back to the local rag-chatbot-langchain chain otherwise.
+    """
     from src.evaluator import load_qa_pairs, build_ragas_dataset, run_evaluation, save_results
     from src.dataset_builder import validate_qa_pairs, summarize_dataset
+    from src.api_client import get_api_url, build_ragas_dataset_from_api
 
-    # Reuse the RAG chain from Project 1
-    sys.path.insert(0, "../rag-chatbot-langchain")
-    try:
-        from src.ingestion import ingest_pdf
-        from src.chain import build_rag_chain
-    except ImportError:
-        logger.error(
-            "Could not import from rag-chatbot-langchain. "
-            "Make sure Project 1 exists at ../rag-chatbot-langchain/"
-        )
-        sys.exit(1)
-
-    # Load and validate the eval dataset
     qa_pairs = load_qa_pairs()
     errors = validate_qa_pairs(qa_pairs)
     if errors:
@@ -55,18 +47,30 @@ def run_eval(pdf_path: str, run_name: str) -> str:
 
     summarize_dataset(qa_pairs)
 
-    # Build the RAG chain on the provided PDF
-    logger.info(f"Ingesting PDF: {pdf_path}")
-    vectorstore = ingest_pdf(pdf_path, persist_directory="./eval_chroma_db")
-    chain, retriever = build_rag_chain(vectorstore)
+    api_url = get_api_url()
 
-    # Collect answers + contexts for each Q&A pair
-    dataset = build_ragas_dataset(qa_pairs, chain, retriever)
+    if api_url:
+        logger.info(f"Using live RAG API at {api_url}")
+        dataset = build_ragas_dataset_from_api(qa_pairs, api_url, pdf_path=pdf_path)
+    else:
+        logger.info("RAG_API_URL not set — falling back to local rag-chatbot-langchain chain")
+        sys.path.insert(0, "../rag-chatbot-langchain")
+        try:
+            from src.ingestion import ingest_pdf
+            from src.chain import build_rag_chain
+        except ImportError:
+            logger.error(
+                "Could not import from rag-chatbot-langchain and RAG_API_URL is not set. "
+                "Set RAG_API_URL=http://localhost:8001 or run Project 1 API server first."
+            )
+            sys.exit(1)
 
-    # Score with RAGAS
+        logger.info(f"Ingesting PDF: {pdf_path}")
+        vectorstore = ingest_pdf(pdf_path, persist_directory="./eval_chroma_db")
+        chain, retriever = build_rag_chain(vectorstore)
+        dataset = build_ragas_dataset(qa_pairs, chain, retriever)
+
     results_df = run_evaluation(dataset)
-
-    # Save and print summary
     path = save_results(results_df, run_name)
 
     from src.reporter import print_single_run_summary
